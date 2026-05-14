@@ -80,7 +80,7 @@ def print_summary(results: dict) -> None:
     print()
     _rule("═")
     print(
-        "  Outputs: output/heatmap.png · hourly_bar.png · "
+        "  Outputs: output/summary_report.html · "
         "merged_utilization.csv · weekly_report.csv"
     )
     _rule("═")
