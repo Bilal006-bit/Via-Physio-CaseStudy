@@ -35,17 +35,17 @@ _COLORSCALE = [
 ]
 
 _COLORBAR = dict(
-    tickvals=[-0.5, 0.25, 0.75, 1.75, 2.5],
+    tickvals=[-0.5, 0.0, 0.5, 1.0, 2.5],
     ticktext=[
-        "No Coverage",
-        "Free  (< 0.5)",
-        "Normal  (0.5 – 1.0)",
-        "Overloaded  (> 1.0)",
+        "No Coverage  (NC)",
+        "0.0  —  Free starts",
+        "0.5  —  Normal starts",
+        "1.0  —  Overloaded starts",
         "2.5+",
     ],
-    title=dict(text="Status", side="right", font=dict(size=11)),
-    thickness=18,
-    len=0.9,
+    title=dict(text="Utilization Ratio", side="right", font=dict(size=11)),
+    thickness=20,
+    len=0.95,
     tickfont=dict(size=10),
 )
 
@@ -144,7 +144,7 @@ def heatmap_div(merged: pd.DataFrame, first_chart: bool = True) -> str:
             zmax=2.5,
             text=cell_text,
             texttemplate="%{text}",
-            textfont={"size": 9, "color": "#333333"},
+            textfont={"size": 10, "color": "#ffffff"},
             customdata=custom,
             hovertemplate=(
                 "<b>%{x}  ·  %{y}</b><br>"
