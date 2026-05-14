@@ -9,7 +9,6 @@ Anyone with a browser can open it.
 
 import base64
 import logging
-from datetime import date
 from pathlib import Path
 
 import pandas as pd
@@ -70,28 +69,30 @@ body {
 }
 .wrapper { max-width: 1100px; margin: 0 auto; padding: 32px 24px; }
 
-/* Header */
+/* Header — Via Physio brand colour #23285D */
 .report-header {
-    background: linear-gradient(135deg, #1a252f 0%, #2c3e50 100%);
+    background: #23285D;
     color: white;
     padding: 36px 40px;
     border-radius: 12px;
     margin-bottom: 28px;
+    border-bottom: 4px solid #F2BD75;
 }
 .report-header h1 { font-size: 26px; font-weight: 700; margin-bottom: 6px; }
 .report-header p  { font-size: 14px; opacity: 0.75; margin-top: 4px; }
+.report-header .accent { color: #F2BD75; font-weight: 600; opacity: 1; }
 
 /* Executive summary */
 .exec-summary {
     background: #fff;
-    border-left: 5px solid #e74c3c;
+    border-left: 5px solid #23285D;
     padding: 20px 24px;
     border-radius: 8px;
     margin-bottom: 24px;
     box-shadow: 0 2px 8px rgba(0,0,0,.06);
 }
 .exec-summary h2 { font-size: 14px; text-transform: uppercase;
-                   letter-spacing: .06em; color: #e74c3c; margin-bottom: 8px; }
+                   letter-spacing: .06em; color: #23285D; margin-bottom: 8px; }
 .exec-summary p  { font-size: 15px; }
 
 /* KPI cards */
@@ -131,7 +132,7 @@ body {
     font-size: 17px;
     font-weight: 700;
     margin-bottom: 6px;
-    color: #2c3e50;
+    color: #23285D;
 }
 .section .subtitle {
     font-size: 13px;
@@ -179,24 +180,26 @@ tr:hover td { background: #fafbfc; }
     font-size: 18px;
 }
 
-/* Scale section */
+/* Scale section — Via gold accent */
 .scale-box {
-    background: linear-gradient(135deg, #eaf4fb 0%, #d6eaf8 100%);
-    border-left: 4px solid #3498db;
+    background: #fffbf2;
+    border-left: 4px solid #F2BD75;
     padding: 18px 22px;
     border-radius: 8px;
     font-size: 14px;
     margin-top: 16px;
 }
+.scale-box strong { color: #23285D; }
 
 /* Footer */
 .footer {
     text-align: center;
     font-size: 12px;
-    color: #aab;
+    color: #23285D;
+    opacity: 0.5;
     margin-top: 32px;
     padding-top: 16px;
-    border-top: 1px solid #e0e3e8;
+    border-top: 2px solid #F2BD75;
 }
 
 @media (max-width: 700px) {
@@ -302,8 +305,8 @@ def build_report(merged: pd.DataFrame, results: dict) -> None:
   <!-- HEADER -->
   <div class="report-header">
     <h1>Reception Utilization Analysis</h1>
-    <p>Via Physiotherapy &nbsp;·&nbsp; Calendar Week 35 (Mon 25 Aug – Fri 29 Aug 2025)</p>
-    <p>Generated: {date.today().strftime('%d %B %Y')} &nbsp;·&nbsp; Bilal Ali</p>
+    <p><span class="accent">Via Physiotherapy</span> &nbsp;·&nbsp; Calendar Week 35 (Mon 25 Aug – Fri 29 Aug 2025)</p>
+    <p>Prepared by Bilal Ali</p>
   </div>
 
   <!-- EXECUTIVE SUMMARY -->
@@ -452,25 +455,30 @@ def build_report(merged: pd.DataFrame, results: dict) -> None:
 
   <!-- HOW TO SCALE -->
   <div class="section">
-    <h2>How to Scale This</h2>
+    <h2>Turning This Into a Weekly Ops Routine</h2>
     <div class="scale-box">
-      <strong>Short term (now):</strong> Run <code>python run.py</code> every Monday
-      morning on the previous week's calendar export. Share this HTML file via email —
-      it contains everything and needs no software to open.<br><br>
-      <strong>Medium term:</strong> Connect the script to the clinic's scheduling system
-      via API export. Store results in a structured database (PostgreSQL) to enable
-      trend analysis across weeks and multiple clinic locations.<br><br>
-      <strong>Long term:</strong> Embed the key metrics into a live Power BI or Metabase
-      dashboard, refreshed automatically. The merged CSV this script already produces
-      is the exact input format those tools expect — no further transformation needed.
+      <strong>Right now — no setup needed:</strong> Forward this file to your operations
+      manager. It opens in any browser and contains everything: charts, tables,
+      recommendations. Nothing to install, nothing to configure.<br><br>
+      <strong>Week-by-week tracking:</strong> Export the previous week's calendar data
+      every Monday morning and run <code>python run.py</code>. A fresh report is ready
+      in seconds. Over time, comparing KW 35 to KW 36 to KW 37 shows whether staffing
+      changes are actually working — or whether the overload is structural.<br><br>
+      <strong>As Via scales across all four locations:</strong> The pipeline is built to
+      extend. Adding a <code>clinic_id</code> field means one run produces a heatmap per
+      location. The ops manager can compare Mitte vs. Prenzlauer Berg vs. other sites
+      side-by-side — identifying which clinics have the staffing problem and which are
+      running efficiently. No code changes required, only data.<br><br>
+      <strong>Fully automated (next step):</strong> Once connected to the scheduling
+      system's export, the pipeline runs on a timer and emails this report every Monday
+      morning automatically. The operations team gets the insights without touching Python.
     </div>
   </div>
 
   <!-- FOOTER -->
   <div class="footer">
     Reception Utilization Analysis &nbsp;·&nbsp; Via Physiotherapy KW 35 &nbsp;·&nbsp;
-    Bilal Ali &nbsp;·&nbsp; Bilalalidaper@gmail.com &nbsp;·&nbsp;
-    Generated {date.today().strftime('%d %B %Y')}
+    Bilal Ali &nbsp;·&nbsp; Bilalalidaper@gmail.com
   </div>
 
 </div>
