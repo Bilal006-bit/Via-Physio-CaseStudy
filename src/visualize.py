@@ -183,9 +183,9 @@ def heatmap_div(merged: pd.DataFrame, first_chart: bool = True) -> str:
             fixedrange=True,
         ),
         font=dict(family="Arial"),
-        height=max(460, n_rows * 36),  # ~36px per hourly row → readable cells
-        margin=dict(l=70, r=160, t=110, b=20),
-        plot_bgcolor="#ffffff",
+        height=max(460, n_rows * 42),  # 42px per row — more breathing room
+        margin=dict(l=130, r=185, t=110, b=30),  # l=130 fits "07:00 – 07:59"
+        plot_bgcolor="#eaecee",   # light grey fills empty (no-data) cells cleanly
         paper_bgcolor="#ffffff",
     )
 
