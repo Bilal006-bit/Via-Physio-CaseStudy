@@ -180,17 +180,6 @@ tr:hover td { background: #fafbfc; }
     font-size: 18px;
 }
 
-/* Scale section — Via gold accent */
-.scale-box {
-    background: #fffbf2;
-    border-left: 4px solid #F2BD75;
-    padding: 18px 22px;
-    border-radius: 8px;
-    font-size: 14px;
-    margin-top: 16px;
-}
-.scale-box strong { color: #23285D; }
-
 /* Footer */
 .footer {
     text-align: center;
@@ -451,28 +440,6 @@ def build_report(merged: pd.DataFrame, results: dict) -> None:
         structural staffing gaps before they become chronic.
       </li>
     </ul>
-  </div>
-
-  <!-- HOW TO SCALE -->
-  <div class="section">
-    <h2>Turning This Into a Weekly Ops Routine</h2>
-    <div class="scale-box">
-      <strong>Right now — no setup needed:</strong> Forward this file to your operations
-      manager. It opens in any browser and contains everything: charts, tables,
-      recommendations. Nothing to install, nothing to configure.<br><br>
-      <strong>Week-by-week tracking:</strong> Export the previous week's calendar data
-      every Monday morning and run <code>python run.py</code>. A fresh report is ready
-      in seconds. Over time, comparing KW 35 to KW 36 to KW 37 shows whether staffing
-      changes are actually working — or whether the overload is structural.<br><br>
-      <strong>As Via scales across all four locations:</strong> The pipeline is built to
-      extend. Adding a <code>clinic_id</code> field means one run produces a heatmap per
-      location. The ops manager can compare Mitte vs. Prenzlauer Berg vs. other sites
-      side-by-side — identifying which clinics have the staffing problem and which are
-      running efficiently. No code changes required, only data.<br><br>
-      <strong>Fully automated (next step):</strong> Once connected to the scheduling
-      system's export, the pipeline runs on a timer and emails this report every Monday
-      morning automatically. The operations team gets the insights without touching Python.
-    </div>
   </div>
 
   <!-- FOOTER -->
