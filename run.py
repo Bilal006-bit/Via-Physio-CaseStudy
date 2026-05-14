@@ -10,6 +10,7 @@ Outputs written to output/:
     hourly_bar.png           optional hourly pattern chart
     merged_utilization.csv   full merged dataset
     weekly_report.csv        bonus weekly summary
+    summary_report.html      self-contained HTML report (charts embedded)
 """
 
 import logging
@@ -28,6 +29,7 @@ from src.clean import load_calendar, patients_per_slot, load_shiftplan, build_me
 from src.analyze import run_analysis
 from src.visualize import plot_heatmap, plot_hourly_bar
 from src.export import save_merged, save_weekly_report
+from src.report import build_report
 from src.config import DAY_LABELS
 
 
@@ -113,6 +115,9 @@ def main() -> None:
     logger.info("Step 6 — Exporting outputs...")
     save_merged(merged)
     save_weekly_report(results, results["daily_avg"])
+
+    logger.info("Step 7 — Building HTML report...")
+    build_report(merged, results)
 
     print_summary(results)
 
