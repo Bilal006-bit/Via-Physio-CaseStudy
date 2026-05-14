@@ -1,119 +1,201 @@
-"""Visualizations — heatmap and hourly bar chart, saved as PNG to output/."""
+"""
+Visualization module — Plotly interactive charts.
+
+Returns HTML div strings (not PNG files) so the report
+embeds fully interactive charts with hover tooltips.
+
+Charts produced:
+  1. heatmap_div   — utilization by time slot x day (RdYlGn_r)
+  2. hourly_div    — avg utilization by hour of day
+"""
 
 import logging
-import warnings
 
-import matplotlib.pyplot as plt
+import numpy as np
 import pandas as pd
-import seaborn as sns
+import plotly.graph_objects as go
 
-warnings.filterwarnings("ignore", category=UserWarning, module="matplotlib")
-
-from src.config import DAY_LABELS, OUT_DIR, OVERLOAD_THRESHOLD, UNDERUTIL_THRESHOLD
+from src.config import DAY_LABELS, OVERLOAD_THRESHOLD, UNDERUTIL_THRESHOLD
 
 logger = logging.getLogger(__name__)
 
-
-def _save(fig: plt.Figure, name: str) -> None:
-    """Save figure to output/ and close it."""
-    OUT_DIR.mkdir(exist_ok=True)
-    path = OUT_DIR / name
-    fig.savefig(path, dpi=150, bbox_inches="tight")
-    plt.close(fig)
-    logger.info("Saved → %s", name)
+# ── Colour helpers ─────────────────────────────────────────────────────────────
+_RAMP = [
+    [0.0, "#27ae60"],  # green  — free
+    [0.4, "#f1c40f"],  # yellow — normal-low
+    [0.6, "#e67e22"],  # amber  — normal-high
+    [1.0, "#e74c3c"],  # red    — overloaded
+]
 
 
 def _slot_colour(val: float) -> str:
-    """Traffic-light colour for a utilization value."""
+    """Traffic-light hex for a single utilization value (used in bar chart)."""
     if val > OVERLOAD_THRESHOLD:
-        return "#e74c3c"  # red — overloaded
+        return "#e74c3c"
     if val >= UNDERUTIL_THRESHOLD:
-        return "#f39c12"  # amber — normal
-    return "#27ae60"  # green — free capacity
+        return "#f39c12"
+    return "#27ae60"
 
 
-def plot_heatmap(merged: pd.DataFrame) -> None:
-    """Heatmap: time slots × weekdays, coloured by utilization ratio.
+# ── Chart builders ─────────────────────────────────────────────────────────────
 
-    RdYlGn_r: red = overloaded, green = free — intuitive for a clinic manager.
+
+def heatmap_div(merged: pd.DataFrame, first_chart: bool = True) -> str:
+    """Interactive heatmap: time slots × days, colour = utilization ratio.
+
+    Hover tooltip shows: day, time, ratio, patient count, admin count.
+    first_chart=True  → embeds the plotly.js library (self-contained).
+    first_chart=False → returns only the <div> (JS already in page).
     """
-    pivot = merged.pivot_table(
+    # Build pivot tables — utilization, patients, admins
+    util = merged.pivot_table(
         index="time", columns="date", values="utilization", aggfunc="mean"
+    ).sort_index()
+    pts = (
+        merged.pivot_table(
+            index="time", columns="date", values="patients_booked", aggfunc="sum"
+        )
+        .reindex_like(util)
+        .fillna(0)
     )
-    pivot.columns = [DAY_LABELS.get(c, c) for c in pivot.columns]
-
-    fig, ax = plt.subplots(figsize=(10, 13))
-    sns.heatmap(
-        pivot.sort_index(),
-        ax=ax,
-        cmap="RdYlGn_r",
-        vmin=0,
-        vmax=2.5,
-        center=1.0,
-        annot=True,
-        fmt=".1f",
-        linewidths=0.4,
-        linecolor="white",
-        cbar_kws={"label": "Utilization Ratio  (patients ÷ admins)"},
+    adm = (
+        merged.pivot_table(
+            index="time", columns="date", values="admins_available", aggfunc="mean"
+        )
+        .reindex_like(util)
+        .fillna(0)
     )
-    ax.set_title(
-        "Reception Utilization — KW 35 (25–29 Aug 2025)\nRed = overloaded  |  Green = free",
-        fontsize=13,
-        fontweight="bold",
-        pad=14,
+
+    day_labels = [DAY_LABELS.get(c, c) for c in util.columns]
+    time_labels = util.index.tolist()
+
+    # customdata shape: (rows, cols, 2) → [patients, admins]
+    custom = np.stack([pts.values, adm.values], axis=-1)
+
+    fig = go.Figure(
+        data=go.Heatmap(
+            z=util.values,
+            x=day_labels,
+            y=time_labels,
+            colorscale=_RAMP,
+            zmin=0,
+            zmax=2.5,
+            zmid=1.0,
+            text=np.where(np.isnan(util.values), "", util.values),
+            texttemplate="%{text:.1f}",
+            textfont={"size": 9},
+            customdata=custom,
+            hovertemplate=(
+                "<b>%{x}  ·  %{y}</b><br>"
+                "Utilization ratio: <b>%{z:.2f}</b><br>"
+                "Patients booked: %{customdata[0]:.0f}<br>"
+                "Admins available: %{customdata[1]:.0f}"
+                "<extra></extra>"
+            ),
+            colorbar=dict(
+                title=dict(text="Utilization<br>Ratio", side="right"),
+                thickness=14,
+                len=0.9,
+            ),
+        )
     )
-    ax.tick_params(axis="x", rotation=0)
-    ax.tick_params(axis="y", rotation=0)
-    _save(fig, "heatmap.png")
+
+    fig.update_layout(
+        title=dict(
+            text="Reception Utilization Heatmap — KW 35 (25–29 Aug 2025)<br>"
+            "<sup>Red = overloaded (>1.0)  |  Green = free capacity (<0.5)</sup>",
+            font=dict(size=14, color="#23285D"),
+        ),
+        xaxis=dict(
+            title="Day",
+            tickfont=dict(size=11),
+            side="top",
+        ),
+        yaxis=dict(
+            title="Time Slot",
+            autorange="reversed",  # earliest time at top
+            tickfont=dict(size=9),
+        ),
+        font=dict(family="Arial"),
+        height=700,
+        margin=dict(l=70, r=20, t=90, b=20),
+        plot_bgcolor="#ffffff",
+        paper_bgcolor="#ffffff",
+    )
+
+    div = fig.to_html(
+        full_html=False,
+        include_plotlyjs=first_chart,  # True = embed ~3.5MB JS once
+        config={"responsive": True, "displayModeBar": True},
+    )
+    logger.info("Heatmap chart div generated (%d chars)", len(div))
+    return div
 
 
-def plot_hourly_bar(hourly_avg: pd.DataFrame) -> None:
-    """Bar chart: average utilization by hour of day across all 5 days.
+def hourly_bar_div(hourly_avg: pd.DataFrame) -> str:
+    """Interactive bar chart: avg utilization by hour of day (all 5 days combined).
 
-    Shows *when* the clinic is under pressure — more actionable than daily averages.
+    Bars coloured by utilization level. Hover shows exact ratio.
+    Assumes plotly.js already embedded (call after heatmap_div).
     """
     colours = [_slot_colour(v) for v in hourly_avg["utilization"]]
     labels = [f"{int(h):02d}:00" for h in hourly_avg["hour"]]
-    x = list(range(len(labels)))
 
-    fig, ax = plt.subplots(figsize=(12, 5))
-    bars = ax.bar(
-        x, hourly_avg["utilization"], color=colours, width=0.6, edgecolor="white"
-    )
-    ax.set_xticks(x)
-    ax.set_xticklabels(labels)
-
-    for bar, val in zip(bars, hourly_avg["utilization"]):
-        ax.text(
-            bar.get_x() + bar.get_width() / 2,
-            bar.get_height() + 0.03,
-            f"{val:.2f}",
-            ha="center",
-            va="bottom",
-            fontsize=8.5,
-            fontweight="bold",
+    fig = go.Figure()
+    fig.add_trace(
+        go.Bar(
+            x=labels,
+            y=hourly_avg["utilization"].tolist(),
+            marker_color=colours,
+            marker_line_color="white",
+            marker_line_width=1.5,
+            hovertemplate="<b>%{x}</b><br>Avg ratio: <b>%{y:.2f}</b><extra></extra>",
+            text=[f"{v:.2f}" for v in hourly_avg["utilization"]],
+            textposition="outside",
+            textfont=dict(size=9, color="#333"),
         )
+    )
 
-    ax.axhline(
-        OVERLOAD_THRESHOLD,
-        color="#e74c3c",
-        linestyle="--",
-        linewidth=1.2,
-        label=f"Overloaded  (> {OVERLOAD_THRESHOLD})",
+    # Threshold lines
+    fig.add_hline(
+        y=OVERLOAD_THRESHOLD,
+        line=dict(color="#e74c3c", dash="dash", width=1.5),
+        annotation_text=f"Overloaded  > {OVERLOAD_THRESHOLD}",
+        annotation_position="top right",
+        annotation_font=dict(color="#e74c3c", size=10),
     )
-    ax.axhline(
-        UNDERUTIL_THRESHOLD,
-        color="#27ae60",
-        linestyle="--",
-        linewidth=1.2,
-        label=f"Free  (< {UNDERUTIL_THRESHOLD})",
+    fig.add_hline(
+        y=UNDERUTIL_THRESHOLD,
+        line=dict(color="#27ae60", dash="dash", width=1.5),
+        annotation_text=f"Free  < {UNDERUTIL_THRESHOLD}",
+        annotation_position="bottom right",
+        annotation_font=dict(color="#27ae60", size=10),
     )
-    ax.set_title(
-        "Average Utilization by Hour of Day — KW 35", fontsize=13, fontweight="bold"
+
+    fig.update_layout(
+        title=dict(
+            text="Average Utilization by Hour of Day — KW 35 (all 5 days combined)",
+            font=dict(size=14, color="#23285D"),
+        ),
+        xaxis=dict(title="Hour of Day", tickfont=dict(size=10)),
+        yaxis=dict(
+            title="Avg Utilization (patients ÷ admins)",
+            tickfont=dict(size=10),
+            rangemode="tozero",
+        ),
+        font=dict(family="Arial"),
+        height=400,
+        margin=dict(l=60, r=20, t=70, b=50),
+        plot_bgcolor="#fafafa",
+        paper_bgcolor="#ffffff",
+        showlegend=False,
+        bargap=0.25,
     )
-    ax.set_ylabel("Avg Utilization  (patients ÷ admins)")
-    ax.set_ylim(0, max(hourly_avg["utilization"].max() * 1.25, 1.6))
-    ax.legend(fontsize=9)
-    ax.grid(axis="y", alpha=0.3)
-    ax.tick_params(axis="x", rotation=45)
-    _save(fig, "hourly_bar.png")
+
+    div = fig.to_html(
+        full_html=False,
+        include_plotlyjs=False,  # JS already embedded by heatmap_div
+        config={"responsive": True},
+    )
+    logger.info("Hourly bar chart div generated (%d chars)", len(div))
+    return div

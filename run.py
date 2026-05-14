@@ -27,7 +27,6 @@ logger = logging.getLogger(__name__)
 
 from src.clean import load_calendar, patients_per_slot, load_shiftplan, build_merged
 from src.analyze import run_analysis
-from src.visualize import plot_heatmap, plot_hourly_bar
 from src.export import save_merged, save_weekly_report
 from src.report import build_report
 from src.config import DAY_LABELS
@@ -106,17 +105,12 @@ def main() -> None:
 
     logger.info("Step 4 — Running analysis...")
     results = run_analysis(merged)
-    results["daily_avg"] = results.pop("daily_avg")  # ensure key exists
 
-    logger.info("Step 5 — Generating visualizations...")
-    plot_heatmap(merged)
-    plot_hourly_bar(results["hourly_avg"])
-
-    logger.info("Step 6 — Exporting outputs...")
+    logger.info("Step 5 — Exporting CSV outputs...")
     save_merged(merged)
     save_weekly_report(results, results["daily_avg"])
 
-    logger.info("Step 7 — Building HTML report...")
+    logger.info("Step 6 — Building HTML report with interactive charts...")
     build_report(merged, results)
 
     print_summary(results)

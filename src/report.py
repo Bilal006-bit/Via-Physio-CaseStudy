@@ -2,27 +2,26 @@
 HTML report generator.
 
 Builds output/summary_report.html — a fully self-contained file.
-Both charts are embedded as base64 data URIs so the file works
-with no internet connection, no Python, no extra files.
-Anyone with a browser can open it.
+Plotly charts are embedded inline (interactive: hover, zoom, tooltips).
+No internet connection required to open the file.
 """
 
-import base64
 import logging
 from pathlib import Path
 
 import pandas as pd
 
 from src.config import DAY_LABELS, OUT_DIR, OVERLOAD_THRESHOLD, UNDERUTIL_THRESHOLD
+from src.visualize import heatmap_div, hourly_bar_div
 
 logger = logging.getLogger(__name__)
 
 
-# ── Helpers ───────────────────────────────────────────────────────────────────
+# ── (base64 helper removed — charts are now interactive Plotly divs) ──────────
 
 
-def _b64_img(path: Path) -> str:
-    """Read a PNG and return an inline base64 data URI for <img src=...>."""
+def _placeholder(path: Path) -> str:
+    """Kept for signature compatibility — no longer used."""
     with open(path, "rb") as f:
         encoded = base64.b64encode(f.read()).decode()
     return f"data:image/png;base64,{encoded}"
@@ -223,9 +222,10 @@ def build_report(merged: pd.DataFrame, results: dict) -> None:
     free_slots = results["free"].head(5)
     top3 = results["top3"]
 
-    # ── Embed images ───────────────────────────────────────────────────────────
-    heatmap_src = _b64_img(OUT_DIR / "heatmap.png")
-    hourly_src = _b64_img(OUT_DIR / "hourly_bar.png")
+    # ── Generate interactive Plotly chart divs ────────────────────────────────
+    logger.info("Building interactive charts (Plotly)...")
+    chart_heatmap = heatmap_div(merged, first_chart=True)  # embeds plotly.js
+    chart_hourly = hourly_bar_div(results["hourly_avg"])  # reuses same JS
 
     # ── Daily table rows ───────────────────────────────────────────────────────
     daily_rows = ""
@@ -334,26 +334,24 @@ def build_report(merged: pd.DataFrame, results: dict) -> None:
     </div>
   </div>
 
-  <!-- HEATMAP -->
+  <!-- HEATMAP — interactive Plotly chart -->
   <div class="section">
     <h2>Utilization Heatmap — Time Slot × Day</h2>
     <p class="subtitle">
-      Each cell = utilization ratio for that 20-minute slot on that day.
-      Red = overloaded (ratio &gt; 1.0) &nbsp;|&nbsp;
-      Green = free capacity (ratio &lt; 0.5).
+      Hover over any cell to see the exact ratio, patient count, and admin count.
+      Red = overloaded (ratio &gt; 1.0) &nbsp;|&nbsp; Green = free capacity (ratio &lt; 0.5).
     </p>
-    <img src="{heatmap_src}" alt="Utilization heatmap">
+    {chart_heatmap}
   </div>
 
-  <!-- HOURLY BAR CHART -->
+  <!-- HOURLY BAR — interactive Plotly chart -->
   <div class="section">
     <h2>Average Utilization by Hour of Day</h2>
     <p class="subtitle">
-      Aggregated across all 5 days — shows <em>when during the day</em>
-      the clinic is under pressure. Red bars = admin team is stretched;
-      green bars = capacity available for extra tasks.
+      Aggregated across all 5 days. Hover bars for exact values.
+      Red = overloaded &nbsp;|&nbsp; Amber = normal &nbsp;|&nbsp; Green = free capacity.
     </p>
-    <img src="{hourly_src}" alt="Hourly utilization bar chart">
+    {chart_hourly}
   </div>
 
   <!-- DAILY AVERAGES TABLE -->
