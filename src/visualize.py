@@ -100,7 +100,7 @@ def heatmap_div(merged: pd.DataFrame, first_chart: bool = True) -> str:
     ).sort_index()
     pts = (
         df.pivot_table(
-            index="hour_label", columns="date", values="patients_booked", aggfunc="sum"
+            index="hour_label", columns="date", values="patients_booked", aggfunc="mean"
         )
         .reindex_like(util)
         .fillna(0)
@@ -148,9 +148,9 @@ def heatmap_div(merged: pd.DataFrame, first_chart: bool = True) -> str:
             customdata=custom,
             hovertemplate=(
                 "<b>%{x}  ·  %{y}</b><br>"
-                "Utilization: <b>%{customdata[2]}</b><br>"
-                "Patients booked: %{customdata[0]:.0f}<br>"
-                "Admins available: %{customdata[1]:.0f}"
+                "Avg utilization ratio: <b>%{customdata[2]}</b><br>"
+                "Avg patients per 20-min slot: %{customdata[0]:.1f}<br>"
+                "Avg admins available: %{customdata[1]:.1f}"
                 "<extra></extra>"
             ),
             colorbar=_COLORBAR,
