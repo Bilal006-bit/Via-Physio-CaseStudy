@@ -1,16 +1,20 @@
 """
 Reception Utilization Analysis — Via Physiotherapy
 ====================================================
-Entry point.  Run with:
+Combines patient appointment calendar with admin shift schedules to calculate
+reception workload per 20-minute slot across Calendar Week 35.
 
+Usage:
     python run.py
 
 Outputs written to output/:
-    heatmap.png              required visualisation
-    hourly_bar.png           optional hourly pattern chart
-    merged_utilization.csv   full merged dataset
-    weekly_report.csv        bonus weekly summary
-    summary_report.html      self-contained HTML report (charts embedded)
+    merged_utilization.csv   full merged dataset with ratios and status labels
+    weekly_report.csv        bonus weekly summary (per-day averages)
+    summary_report.html      self-contained interactive report (charts embedded)
+
+Data scope: KW 35 — Mon 25 Aug to Fri 29 Aug 2025 (one week).
+Patterns observed should be validated across multiple weeks before
+drawing conclusions about recurring behaviour.
 """
 
 import logging
@@ -25,70 +29,81 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-from src.clean import load_calendar, patients_per_slot, load_shiftplan, build_merged
 from src.analyze import run_analysis
+from src.clean import build_merged, load_calendar, load_shiftplan, patients_per_slot
+from src.config import DAY_LABELS
 from src.export import save_merged, save_weekly_report
 from src.report import build_report
-from src.config import DAY_LABELS
+
+W = 60
 
 
-def _rule(char="─", width=60) -> None:
-    print(char * width)
+def _rule(char: str = "─") -> None:
+    print(char * W)
+
+
+def _section(title: str) -> None:
+    print(f"\n  {title}")
+    _rule()
 
 
 def print_summary(results: dict) -> None:
-    """Print a formatted summary report to stdout."""
+    """Print the analysis summary to stdout after the pipeline completes."""
     print()
-    print("╔" + "═" * 58 + "╗")
-    print("║" + "  RECEPTION UTILIZATION REPORT".center(58) + "║")
-    print("║" + "  Via Physiotherapy · KW 35 · Aug 2025".center(58) + "║")
-    print("╚" + "═" * 58 + "╝")
+    print("╔" + "═" * (W - 2) + "╗")
+    print("║" + "  RECEPTION UTILIZATION REPORT".center(W - 2) + "║")
+    print("║" + "  Via Physiotherapy  ·  KW 35  ·  Aug 2025".center(W - 2) + "║")
+    print("╚" + "═" * (W - 2) + "╝")
 
-    print("\n  OVERVIEW")
-    _rule()
-    print(f"    Weekly avg utilization : {results['weekly_avg']}")
-    print(f"    Total 20-min slots     : {results['total_slots']}")
+    # ── Overview ──────────────────────────────────────────────────────────────
+    _section("OVERVIEW")
+    print(f"    Weekly avg utilization ratio : {results['weekly_avg']}")
+    print(f"    Total 20-min slots analysed  : {results['total_slots']}")
+    print(f"    Data scope                   : KW 35 only — validate further")
     for status, pct in results["pct"].items():
-        print(f"    {status:<22}  {pct}%")
+        print(f"    {status:<26} {pct}%")
 
-    print("\n  DAILY AVERAGES")
-    _rule()
+    # ── Daily averages ────────────────────────────────────────────────────────
+    _section("DAILY AVERAGES")
     for _, row in results["daily_avg"].iterrows():
         flag = "  ← OVERLOADED" if row["utilization"] > 1.0 else ""
         print(f"    {str(row['day']):<16}  {row['utilization']:.2f}{flag}")
 
-    print("\n  TOP-3 BUSIEST SLOTS")
-    _rule()
+    # ── Top-3 busiest ─────────────────────────────────────────────────────────
+    _section("TOP-3 BUSIEST SLOTS  (20-min resolution)")
     for _, row in results["top3"].iterrows():
         day = DAY_LABELS.get(str(row["date"]), row["date"])
         print(
-            f"    {day}  {row['time']}  → "
+            f"    {day}  {row['time']}  →  "
             f"{int(row['patients_booked'])} patients / "
-            f"{int(row['admins_available'])} admin = ratio {row['utilization']:.1f}"
+            f"{int(row['admins_available'])} admin  "
+            f"= ratio {row['utilization']:.1f}"
         )
 
-    print("\n  RECOMMENDED FREE WINDOWS (assign admin tasks here)")
-    _rule()
+    # ── Free windows ──────────────────────────────────────────────────────────
+    _section("FREE WINDOWS  (best candidates for admin task scheduling)")
     for _, row in results["free"].iterrows():
         day = DAY_LABELS.get(str(row["date"]), row["date"])
+        star = "  ★ 2 admins" if int(row["admins_available"]) >= 2 else ""
         print(
-            f"    {day}  {row['time']}  → "
+            f"    {day}  {row['time']}  →  "
             f"{int(row['patients_booked'])} patients / "
-            f"{int(row['admins_available'])} admin = ratio {row['utilization']:.2f}"
+            f"{int(row['admins_available'])} admin  "
+            f"= ratio {row['utilization']:.2f}{star}"
         )
 
+    # ── Footer ────────────────────────────────────────────────────────────────
     print()
     _rule("═")
-    print(
-        "  Outputs: output/summary_report.html · "
-        "merged_utilization.csv · weekly_report.csv"
-    )
+    print("  output/summary_report.html   — open in any browser, charts interactive")
+    print("  output/merged_utilization.csv — full dataset, Power BI ready")
+    print("  output/weekly_report.csv      — per-day summary")
     _rule("═")
     print()
 
 
 def main() -> None:
-    """Orchestrate the full pipeline end to end."""
+    """Run the full pipeline: clean → analyse → export → build HTML report."""
     _rule()
     print("  RECEPTION UTILIZATION ANALYSIS  |  Starting...")
     _rule()
@@ -100,7 +115,7 @@ def main() -> None:
     logger.info("Step 2 — Parsing admin shift plan...")
     admins = load_shiftplan()
 
-    logger.info("Step 3 — Merging datasets and calculating utilization...")
+    logger.info("Step 3 — Merging and calculating utilization ratios...")
     merged = build_merged(patients, admins)
 
     logger.info("Step 4 — Running analysis...")
@@ -110,7 +125,7 @@ def main() -> None:
     save_merged(merged)
     save_weekly_report(results, results["daily_avg"])
 
-    logger.info("Step 6 — Building HTML report with interactive charts...")
+    logger.info("Step 6 — Building interactive HTML report...")
     build_report(merged, results)
 
     print_summary(results)

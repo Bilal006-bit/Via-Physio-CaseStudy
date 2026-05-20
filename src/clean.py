@@ -92,8 +92,8 @@ def load_shiftplan() -> pd.DataFrame:
 
     result = (
         pd.DataFrame(records)
-        .groupby(["date", "time"], as_index=False)["admins_available"]
-        .sum()
+        .groupby(["date", "time"], as_index=False)
+        .agg({"admins_available": "sum"})
     )
     logger.info("Shift plan: %d slots parsed", len(result))
     return result

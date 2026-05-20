@@ -56,14 +56,17 @@ def top_overloaded(merged: pd.DataFrame, n: int = 5) -> pd.DataFrame:
     )
 
 
-def top_free(merged: pd.DataFrame, n: int = 5) -> pd.DataFrame:
-    """Return the n most underutilised slots where admins are actually present."""
+def top_free(merged: pd.DataFrame, n: int = 8) -> pd.DataFrame:
+    """Return free windows sorted by admin availability then utilization.
+
+    Most valuable windows (2+ admins, 0 patients) appear first.
+    """
     cols = ["date", "time", "patients_booked", "admins_available", "utilization"]
     return (
         merged[(merged["status"] == "Underutilised") & (merged["admins_available"] > 0)][
             cols
         ]
-        .sort_values("utilization")
+        .sort_values(["admins_available", "utilization"], ascending=[False, True])
         .head(n)
     )
 
