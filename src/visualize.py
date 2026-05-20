@@ -183,10 +183,15 @@ def heatmap_div(merged: pd.DataFrame, first_chart: bool = True) -> str:
             fixedrange=True,
         ),
         font=dict(family="Arial"),
-        height=max(460, n_rows * 42),  # 42px per row — more breathing room
-        margin=dict(l=130, r=185, t=110, b=30),  # l=130 fits "07:00 – 07:59"
-        plot_bgcolor="#eaecee",   # light grey fills empty (no-data) cells cleanly
+        height=max(460, n_rows * 42),
+        margin=dict(l=130, r=185, t=110, b=30),
+        plot_bgcolor="#eaecee",
         paper_bgcolor="#ffffff",
+        hoverlabel=dict(
+            bgcolor="white",
+            bordercolor="#23285D",
+            font=dict(size=13, family="Arial", color="#1a1a2e"),
+        ),
     )
 
     div = fig.to_html(
@@ -272,6 +277,11 @@ def hourly_bar_div(hourly_avg: pd.DataFrame) -> str:
         plot_bgcolor="#fafafa",
         paper_bgcolor="#ffffff",
         showlegend=False,
+        hoverlabel=dict(
+            bgcolor="white",
+            bordercolor="#23285D",
+            font=dict(size=13, family="Arial", color="#1a1a2e"),
+        ),
         bargap=0.25,
     )
 
